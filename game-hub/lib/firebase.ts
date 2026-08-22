@@ -109,6 +109,20 @@ export async function resetRoom(roomCode: string) {
   return true;
 }
 
+export async function resetWhoSaidItGame(roomCode: string) {
+  if (!firebaseFirestore || !roomCode) {
+    return false;
+  }
+
+  await setDoc(
+    doc(firebaseFirestore, "rooms", roomCode),
+    { whoSaidIt: { tiles: {} }, updatedAt: Date.now() },
+    { merge: true }
+  );
+
+  return true;
+}
+
 function getTriviaSubmissionsPath(roomCode?: string) {
   return roomCode ? `rooms/${roomCode}/trivia_submissions` : "triviaSubmissions";
 }

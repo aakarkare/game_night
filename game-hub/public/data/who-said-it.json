@@ -2,18 +2,18 @@
   {
     "id": "quote-01",
     "value": 5,
-    "statement": "I am serious. And don't call me Shirley.",
-    "isTruth": false,
-    "speaker": "A",
-    "speakerName": "Shirley"
+    "statement": "I played an Oompa Loompa for an elementary school play.",
+    "isTruth": true,
+    "speaker": "S",
+    "speakerName": "Shruti"
   },
   {
     "id": "quote-02",
     "value": 10,
-    "statement": "The future belongs to those who believe in the beauty of their dreams.",
+    "statement": "I got separated from my parents when I was young.",
     "isTruth": true,
-    "speaker": "S",
-    "speakerName": "Eleanor Roosevelt"
+    "speaker": "T",
+    "speakerName": "Teja"
   },
   {
     "id": "quote-03",
