@@ -1,0 +1,52 @@
+[
+  {
+    "category": "Pop Culture",
+    "clues": [
+      { "id": "pc-100", "value": 100, "question": "This famous reality show features contestants trying to survive on an island.", "answer": "What is Survivor?", "isRevealed": false },
+      { "id": "pc-200", "value": 200, "question": "Which artist released the hit album 'Midnights' in 2022?", "answer": "Who is Taylor Swift?", "isRevealed": false },
+      { "id": "pc-300", "value": 300, "question": "This sci-fi series features a character known simply as Eleven.", "answer": "What is Stranger Things?", "isRevealed": false },
+      { "id": "pc-400", "value": 400, "question": "What is the highest-grossing film of all time worldwide?", "answer": "What is Avatar?", "isRevealed": false },
+      { "id": "pc-500", "value": 500, "question": "Which superhero team consists of Iron Man, Thor, Hulk, and Captain America?", "answer": "Who are The Avengers?", "isRevealed": false }
+    ]
+  },
+  {
+    "category": "World Geography",
+    "clues": [
+      { "id": "geo-100", "value": 100, "question": "What is the capital city of France?", "answer": "What is Paris?", "isRevealed": false },
+      { "id": "geo-200", "value": 200, "question": "Which river is considered the longest in the world?", "answer": "What is the Nile River?", "isRevealed": false },
+      { "id": "geo-300", "value": 300, "question": "Which country has the largest land area in the world?", "answer": "What is Russia?", "isRevealed": false },
+      { "id": "geo-400", "value": 400, "question": "What is the smallest country in the world by population and area?", "answer": "What is Vatican City?", "isRevealed": false },
+      { "id": "geo-500", "value": 500, "question": "Which mountain range separates Europe from Asia?", "answer": "What are the Ural Mountains?", "isRevealed": false }
+    ]
+  },
+  {
+    "category": "Tech & Web",
+    "clues": [
+      { "id": "tech-100", "value": 100, "question": "What language family powers standard modern web styling?", "answer": "What is CSS?", "isRevealed": false },
+      { "id": "tech-200", "value": 200, "question": "Which operating system kernel is represented by a penguin mascot?", "answer": "What is Linux?", "isRevealed": false },
+      { "id": "tech-300", "value": 300, "question": "What version control system was created by Linus Torvalds in 2005?", "answer": "What is Git?", "isRevealed": false },
+      { "id": "tech-400", "value": 400, "question": "What company originally created and open-sourced React?", "answer": "What is Meta (Facebook)?", "isRevealed": false },
+      { "id": "tech-500", "value": 500, "question": "What open-source JavaScript runtime lets developers run JS on servers?", "answer": "What is Node.js?", "isRevealed": false }
+    ]
+  },
+  {
+    "category": "Movies",
+    "clues": [
+      { "id": "movie-100", "value": 100, "question": "Which Pixar movie features a robot named WALL-E?", "answer": "What is WALL-E?", "isRevealed": false },
+      { "id": "movie-200", "value": 200, "question": "In Toy Story, what is the name of Woody's cowboy friend?", "answer": "Who is Buzz Lightyear?", "isRevealed": false },
+      { "id": "movie-300", "value": 300, "question": "Which film follows a lion cub named Simba?", "answer": "What is The Lion King?", "isRevealed": false },
+      { "id": "movie-400", "value": 400, "question": "Who directed Inception?", "answer": "Who is Christopher Nolan?", "isRevealed": false },
+      { "id": "movie-500", "value": 500, "question": "This 1994 film features a group of teenagers hunted by Ghostface.", "answer": "What is Scream?", "isRevealed": false }
+    ]
+  },
+  {
+    "category": "Science",
+    "clues": [
+      { "id": "sci-100", "value": 100, "question": "What planet is known as the Red Planet?", "answer": "What is Mars?", "isRevealed": false },
+      { "id": "sci-200", "value": 200, "question": "Which gas do plants absorb from the atmosphere?", "answer": "What is carbon dioxide?", "isRevealed": false },
+      { "id": "sci-300", "value": 300, "question": "What is the chemical symbol for gold?", "answer": "What is Au?", "isRevealed": false },
+      { "id": "sci-400", "value": 400, "question": "Which organ in the human body pumps blood?", "answer": "What is the heart?", "isRevealed": false },
+      { "id": "sci-500", "value": 500, "question": "What force keeps us on the ground?", "answer": "What is gravity?", "isRevealed": false }
+    ]
+  }
+]
