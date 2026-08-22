@@ -6,10 +6,12 @@ import {
   joinRoom,
   listenToRoom,
   listenToWhoSaidItGame,
+  updateRoomPlayerScore,
   updateWhoSaidItGame,
   type RoomState,
   type WhoSaidItGameState,
 } from "@/lib/firebase";
+import { shuffleWithSeed } from "@/lib/shuffle";
 import dataset from "../../public/data/who-said-it.json";
 
 const speakerOptions = ["T", "M", "S", "P", "A"] as const;
@@ -28,11 +30,14 @@ function PlayPageContent() {
   const [status, setStatus] = useState("Enter your name and room code to join.");
   const [joinedRoom, setJoinedRoom] = useState(false);
   const [playerId, setPlayerId] = useState("");
+  const [scoreValue, setScoreValue] = useState("");
+  const [scoreStatus, setScoreStatus] = useState("");
   const [gameState, setGameState] = useState<WhoSaidItGameState>(initialGameState);
   const [activeGame, setActiveGame] = useState<RoomState["activeGame"]>("lobby");
   const [players, setPlayers] = useState<RoomState["players"]>({});
 
   const currentPlayer = playerId ? players?.[playerId] : undefined;
+  const displayedDataset = shuffleWithSeed(dataset, roomCode);
 
   useEffect(() => {
     const initialRoomCode = new URLSearchParams(window.location.search).get("roomCode") ?? "";
@@ -115,6 +120,23 @@ function PlayPageContent() {
     setStatus("Question selected. Watch the host screen for the statement.");
   };
 
+  const addScore = async () => {
+    const value = Number(scoreValue);
+    if (!playerId || !scoreValue.trim() || !Number.isFinite(value) || value <= 0) {
+      setScoreStatus("Enter a valid score value.");
+      return;
+    }
+
+    const updated = await updateRoomPlayerScore(roomCode, playerId, value);
+    if (!updated) {
+      setScoreStatus("Score could not be updated.");
+      return;
+    }
+
+    setScoreValue("");
+    setScoreStatus(`Added ${value} points.`);
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-950 to-fuchsia-950 p-6 text-white">
       <div className="mx-auto max-w-md">
@@ -191,7 +213,7 @@ function PlayPageContent() {
             <p className="text-sm uppercase tracking-[0.2em] text-fuchsia-300">Who Said It?</p>
             <h2 className="mt-2 text-2xl font-black">Choose a question</h2>
             <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5">
-              {dataset.map((entry) => {
+              {displayedDataset.map((entry) => {
                 const isAvailable = gameState.tiles[entry.id]?.phase === "hidden";
                 const isOwnSpeakerTile = entry.speaker === (currentPlayer?.speaker ?? speaker);
                 return (
@@ -205,7 +227,34 @@ function PlayPageContent() {
         )}
 
         {joinedRoom && activeGame === "jeopardy" && <div className="mt-5 rounded-3xl border border-amber-400/40 bg-amber-500/10 p-6 text-center text-amber-100">The host opened Jeopardy. Watch the host board for the current clue.</div>}
-        {joinedRoom && activeGame === "scoreboard" && <div className="mt-5 rounded-3xl border border-sky-400/40 bg-sky-500/10 p-6 text-center text-sky-100">The host opened the scoreboard. Your score will update here as you play.</div>}
+        {joinedRoom && playerId && activeGame === "scoreboard" && (
+          <section className="mt-5 rounded-3xl border border-sky-400/40 bg-sky-500/10 p-5 shadow-2xl">
+            <p className="text-sm uppercase tracking-[0.2em] text-sky-300">Scoreboard</p>
+            <h2 className="mt-2 text-2xl font-black">Add points</h2>
+            <p className="mt-2 text-sm text-sky-100">Current score: {currentPlayer?.score ?? 0}</p>
+            <div className="mt-4 flex gap-2">
+              <input
+                type="number"
+                inputMode="numeric"
+                min="1"
+                step="1"
+                value={scoreValue}
+                onChange={(event) => setScoreValue(event.target.value)}
+                placeholder="Value"
+                aria-label="Points to add"
+                className="min-w-0 flex-1 rounded-xl border border-sky-300/40 bg-slate-950 px-4 py-3 text-lg text-white outline-none focus:border-sky-300"
+              />
+              <button
+                type="button"
+                onClick={() => void addScore()}
+                className="rounded-xl bg-sky-400 px-5 py-3 font-black text-slate-950 hover:bg-sky-300"
+              >
+                Add
+              </button>
+            </div>
+            {scoreStatus && <p className="mt-3 text-sm text-sky-100">{scoreStatus}</p>}
+          </section>
+        )}
       </div>
     </main>
   );

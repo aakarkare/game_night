@@ -8,6 +8,7 @@ import {
   type RoomPlayer,
   type WhoSaidItGameState,
 } from "@/lib/firebase";
+import { shuffleWithSeed } from "@/lib/shuffle";
 import dataset from "../public/data/who-said-it.json";
 
 type WhoSaidItEntry = (typeof dataset)[number];
@@ -27,6 +28,7 @@ export default function WhoSaidItGrid({ roomCode, players }: { roomCode: string;
   const [gameState, setGameState] = useState<WhoSaidItGameState>(getInitialGameState);
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const displayedDataset = shuffleWithSeed(dataset, roomCode);
 
   useEffect(() => {
     return listenToWhoSaidItGame(roomCode, (nextState) => {
@@ -85,7 +87,7 @@ export default function WhoSaidItGrid({ roomCode, players }: { roomCode: string;
       </div>
 
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
-        {dataset.map((entry) => {
+        {displayedDataset.map((entry) => {
           const tile = gameState.tiles[entry.id];
           const isOpen = tile?.phase !== "hidden";
           return (
