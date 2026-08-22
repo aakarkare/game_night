@@ -24,6 +24,11 @@ function PlayPageContent() {
   const [playerId, setPlayerId] = useState("");
   const [gameState, setGameState] = useState<WhoSaidItGameState>(initialGameState);
   const [activeGame, setActiveGame] = useState<RoomState["activeGame"]>("lobby");
+  const [players, setPlayers] = useState<RoomState["players"]>({});
+  const [resultOverlay, setResultOverlay] = useState<{ correct: boolean; points: number } | null>(null);
+  const [lastResultTileId, setLastResultTileId] = useState<string | null>(null);
+
+  const currentPlayer = playerId ? players?.[playerId] : undefined;
 
   useEffect(() => {
     const initialRoomCode = new URLSearchParams(window.location.search).get("roomCode") ?? "";
@@ -32,7 +37,10 @@ function PlayPageContent() {
 
   useEffect(() => {
     if (!joinedRoom || !roomCode) return;
-    const unsubscribeRoom = listenToRoom(roomCode, (room) => setActiveGame(room.activeGame ?? "lobby"));
+    const unsubscribeRoom = listenToRoom(roomCode, (room) => {
+      setActiveGame(room.activeGame ?? "lobby");
+      setPlayers(room.players ?? {});
+    });
     const unsubscribeGame = listenToWhoSaidItGame(roomCode, (nextState) => {
       setGameState({ ...nextState, tiles: { ...initialGameState.tiles, ...nextState.tiles } });
     });
@@ -41,6 +49,33 @@ function PlayPageContent() {
       unsubscribeGame();
     };
   }, [joinedRoom, roomCode]);
+
+  useEffect(() => {
+    const activeTileId = gameState.activeTileId;
+    const activeTile = activeTileId ? gameState.tiles[activeTileId] : undefined;
+    const entry = dataset.find((item) => item.id === activeTileId);
+
+    if (!activeTileId || activeTile?.phase !== "resolved") {
+      setLastResultTileId(null);
+      setResultOverlay(null);
+      return;
+    }
+
+    if (
+      !entry ||
+      !activeTile ||
+      gameState.activePlayerId !== playerId ||
+      lastResultTileId === activeTileId
+    ) {
+      return;
+    }
+
+    const points = (activeTile.truthCorrect ? entry.value : 0) + (activeTile.speakerCorrect ? entry.value : 0);
+    setLastResultTileId(activeTileId);
+    setResultOverlay({ correct: Boolean(activeTile.truthCorrect && activeTile.speakerCorrect), points });
+    const timeoutId = window.setTimeout(() => setResultOverlay(null), 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [gameState, lastResultTileId, playerId]);
 
   const handleJoinRoom = async () => {
     const normalizedRoom = roomCode.trim().toUpperCase();
@@ -121,12 +156,19 @@ function PlayPageContent() {
         </div>}
 
         {joinedRoom && (
+          <>
+          <div className="fixed right-6 top-6 z-10 rounded-xl border border-slate-700 bg-slate-900/95 px-4 py-3 text-right shadow-xl">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Player</p>
+            <p className="mt-1 font-bold text-white">{currentPlayer?.name ?? playerName}</p>
+            <p className="mt-1 text-lg font-black text-emerald-400">{currentPlayer?.score ?? 0} points</p>
+          </div>
           <div className="rounded-3xl border border-emerald-500/50 bg-emerald-500/10 p-6 text-center text-emerald-200 shadow-2xl">
             <p className="text-lg font-bold">You are in the room</p>
             <p className="mt-2 text-sm">
               {activeGame === "lobby" ? "Wait for the host to start a game." : `The host opened ${activeGame === "whoSaidIt" ? "Who Said It?" : activeGame}.`}
             </p>
           </div>
+          </>
         )}
 
         {joinedRoom && playerId && activeGame === "whoSaidIt" && (
@@ -149,6 +191,14 @@ function PlayPageContent() {
         {joinedRoom && activeGame === "jeopardy" && <div className="mt-5 rounded-3xl border border-amber-400/40 bg-amber-500/10 p-6 text-center text-amber-100">The host opened Jeopardy. Watch the host board for the current clue.</div>}
         {joinedRoom && activeGame === "scoreboard" && <div className="mt-5 rounded-3xl border border-sky-400/40 bg-sky-500/10 p-6 text-center text-sky-100">The host opened the scoreboard. Your score will update here as you play.</div>}
       </div>
+      {resultOverlay && (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-950/75 p-6 backdrop-blur-sm">
+          <div className={`w-full max-w-sm rounded-2xl border p-8 text-center shadow-2xl ${resultOverlay.correct ? "border-emerald-400/60 bg-emerald-950/95 text-emerald-100" : "border-rose-400/60 bg-rose-950/95 text-rose-100"}`}>
+            <p className="text-3xl font-black">{resultOverlay.correct ? "Correct!" : "Not quite"}</p>
+            <p className="mt-3 text-xl font-bold">{resultOverlay.points} points awarded</p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

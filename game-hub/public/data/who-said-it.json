@@ -18,18 +18,18 @@
   {
     "id": "quote-03",
     "value": 5,
-    "statement": "You can't handle the truth!",
+    "statement": "I got my gold bangle stolen when I was young.",
     "isTruth": true,
-    "speaker": "A",
-    "speakerName": "Colonel Jessup"
+    "speaker": "T",
+    "speakerName": "Teja"
   },
   {
     "id": "quote-04",
     "value": 10,
-    "statement": "I have a dream that one day this nation will rise up.",
+    "statement": "I don't have a middle name",
     "isTruth": true,
-    "speaker": "M",
-    "speakerName": "Martin Luther King Jr."
+    "speaker": "S",
+    "speakerName": "Shruti"
   },
   {
     "id": "quote-05",
