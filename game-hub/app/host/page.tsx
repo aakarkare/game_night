@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ensureRoom, firebaseReady, listenToRoomPlayers, listenToTriviaSubmissions, updateRoomGame, type RoomPlayer, type TriviaSubmission } from "@/lib/firebase";
+import { ensureRoom, firebaseReady, listenToRoomPlayers, listenToTriviaSubmissions, resetRoom, updateRoomGame, type RoomPlayer, type TriviaSubmission } from "@/lib/firebase";
 import WhoSaidItGrid from "@/components/WhoSaidItGrid";
 
 type Clue = {
@@ -134,6 +134,17 @@ function HostPageContent() {
     router.push(`/host?roomCode=${normalized}`);
   };
 
+  const handleNewGame = async () => {
+    setBoard(initialCategories);
+    setPlayers([]);
+    setSelectedClue(null);
+    setShowAnswer(false);
+    setTriviaSubmissions([]);
+    setSelectedGame("landing");
+    setTriviaCategory(null);
+    await resetRoom(roomCode);
+  };
+
   const handleTileClick = (categoryIndex: number, clueIndex: number) => {
     const clue = board[categoryIndex].clues[clueIndex];
 
@@ -217,6 +228,10 @@ function HostPageContent() {
               Room {roomCode}
             </div>
           </header>
+
+          <button type="button" onClick={() => void handleNewGame()} className="mb-6 rounded-lg border border-rose-400/50 px-4 py-2 font-semibold text-rose-200 hover:bg-rose-500/10">
+            New game
+          </button>
 
           <div className="grid gap-5 md:grid-cols-3">
             {[

@@ -90,6 +90,25 @@ export async function updateRoomGame(roomCode: string, activeGame: RoomState["ac
   return true;
 }
 
+export async function resetRoom(roomCode: string) {
+  if (!firebaseFirestore || !roomCode) {
+    return false;
+  }
+
+  await setDoc(
+    doc(firebaseFirestore, "rooms", roomCode),
+    {
+      activeGame: "lobby",
+      players: {},
+      whoSaidIt: { tiles: {} },
+      updatedAt: Date.now(),
+    },
+    { merge: true }
+  );
+
+  return true;
+}
+
 function getTriviaSubmissionsPath(roomCode?: string) {
   return roomCode ? `rooms/${roomCode}/trivia_submissions` : "triviaSubmissions";
 }
