@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ensureRoom, firebaseReady, listenToRoomPlayers, listenToTriviaSubmissions, type RoomPlayer, type TriviaSubmission } from "@/lib/firebase";
+import WhoSaidItGrid from "@/components/WhoSaidItGrid";
 
 type Clue = {
   value: number;
@@ -101,6 +102,7 @@ function HostPageContent() {
   const [showAnswer, setShowAnswer] = useState(false);
   const [triviaSubmissions, setTriviaSubmissions] = useState<TriviaSubmission[]>([]);
   const [selectedGame, setSelectedGame] = useState<HostGame>("landing");
+  const [triviaCategory, setTriviaCategory] = useState<string | null>(null);
 
   const currentClue = useMemo(() => selectedClue?.clue ?? null, [selectedClue]);
 
@@ -239,6 +241,19 @@ function HostPageContent() {
   }
 
   if (selectedGame === "trivia") {
+    if (triviaCategory === "who said it?") {
+      return (
+        <main className="min-h-screen bg-slate-950 p-6 text-white">
+          <div className="mx-auto max-w-7xl">
+            <button type="button" onClick={() => setTriviaCategory(null)} className="mb-4 rounded-lg border border-slate-600 px-4 py-2 font-semibold text-white">
+              Back to trivia categories
+            </button>
+            <WhoSaidItGrid roomCode={roomCode} players={players} />
+          </div>
+        </main>
+      );
+    }
+
     return (
       <main className="min-h-screen bg-slate-950 p-6 text-white">
         <div className="mx-auto max-w-5xl">
@@ -254,7 +269,7 @@ function HostPageContent() {
 
           <div className="grid gap-5 md:grid-cols-3">
             {triviaCategories.map((category) => (
-              <button key={category} type="button" className="min-h-44 rounded-2xl border border-fuchsia-400/40 bg-slate-900 p-6 text-left transition hover:border-fuchsia-300 hover:bg-slate-800">
+              <button key={category} type="button" onClick={() => setTriviaCategory(category)} className="min-h-44 rounded-2xl border border-fuchsia-400/40 bg-slate-900 p-6 text-left transition hover:border-fuchsia-300 hover:bg-slate-800">
                 <span className="text-2xl font-black text-fuchsia-200">{category}</span>
                 <span className="mt-3 block text-sm text-slate-400">Ready for questions</span>
               </button>

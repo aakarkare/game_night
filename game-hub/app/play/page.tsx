@@ -29,15 +29,19 @@ function PlayPageContent() {
       return;
     }
 
-    const player = await joinRoom(normalizedRoom, playerName);
-    if (!player) {
-      setStatus("Unable to join this room right now.");
-      return;
-    }
+    try {
+      const player = await joinRoom(normalizedRoom, playerName);
+      if (!player) {
+        setStatus("Unable to join this room right now.");
+        return;
+      }
 
-    setJoinedRoom(true);
-    setStatus(`${player.name} joined room ${normalizedRoom}.`);
-    window.history.replaceState({}, "", `/play?roomCode=${normalizedRoom}`);
+      setJoinedRoom(true);
+      setStatus(`${player.name} joined room ${normalizedRoom}.`);
+      window.history.replaceState({}, "", `/play?roomCode=${normalizedRoom}`);
+    } catch {
+      setStatus("Unable to join this room right now.");
+    }
   };
 
   const handleSubmit = async (event: FormEvent) => {

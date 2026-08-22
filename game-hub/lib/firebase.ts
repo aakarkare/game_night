@@ -52,6 +52,17 @@ export type RoomState = {
   createdAt: number;
   activeGame: "lobby" | "jeopardy" | "trivia" | "questionnaire";
   players?: Record<string, RoomPlayer>;
+  whoSaidIt?: WhoSaidItGameState;
+};
+
+export type WhoSaidItTileState = {
+  phase: "hidden" | "truthLie" | "speaker" | "resolved";
+  truthCorrect?: boolean;
+  speakerCorrect?: boolean;
+};
+
+export type WhoSaidItGameState = {
+  tiles: Record<string, WhoSaidItTileState>;
 };
 
 function getTriviaSubmissionsPath(roomCode?: string) {
@@ -225,6 +236,31 @@ export function listenToRoomPlayers(
 
     callback(players);
   });
+}
+
+export function listenToWhoSaidItGame(
+  roomCode: string,
+  callback: (game: WhoSaidItGameState) => void
+): Unsubscribe {
+  if (!firebaseFirestore || !roomCode) {
+    callback({ tiles: {} });
+    return () => undefined;
+  }
+
+  const roomRef = doc(firebaseFirestore, "rooms", roomCode);
+  return onSnapshot(roomRef, (snapshot) => {
+    const game = snapshot.data()?.whoSaidIt as WhoSaidItGameState | undefined;
+    callback(game ?? { tiles: {} });
+  });
+}
+
+export async function updateWhoSaidItGame(roomCode: string, game: WhoSaidItGameState) {
+  if (!firebaseFirestore || !roomCode) {
+    return false;
+  }
+
+  await setDoc(doc(firebaseFirestore, "rooms", roomCode), { whoSaidIt: game }, { merge: true });
+  return true;
 }
 
 export async function updateRoomPlayerScore(roomCode: string, playerId: string, delta: number) {
