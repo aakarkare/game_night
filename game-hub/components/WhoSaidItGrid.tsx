@@ -35,9 +35,11 @@ export default function WhoSaidItGrid({ roomCode, players }: { roomCode: string;
 
   useEffect(() => {
     return listenToWhoSaidItGame(roomCode, (nextState) => {
-      setGameState({ tiles: { ...initialTiles, ...nextState.tiles } });
+      setGameState({ ...nextState, tiles: { ...initialTiles, ...nextState.tiles } });
+      setSelectedTileId(nextState.activeTileId ?? null);
+      setSelectedPlayerId(nextState.activePlayerId ?? players[0]?.id ?? "");
     });
-  }, [roomCode]);
+  }, [roomCode, players]);
 
   const selectedEntry = dataset.find((entry) => entry.id === selectedTileId) ?? null;
   const selectedTile = selectedEntry ? gameState.tiles[selectedEntry.id] : null;
@@ -52,14 +54,14 @@ export default function WhoSaidItGrid({ roomCode, players }: { roomCode: string;
   const openTile = (entry: WhoSaidItEntry) => {
     if (gameState.tiles[entry.id]?.phase !== "hidden") return;
     setSelectedTileId(entry.id);
-    void saveState({ ...gameState, tiles: { ...gameState.tiles, [entry.id]: { phase: "truthLie" } } });
+    void saveState({ ...gameState, activeTileId: entry.id, activePlayerId: selectedPlayerId, tiles: { ...gameState.tiles, [entry.id]: { phase: "truthLie" } } });
   };
 
   const resolveTruthLie = (answer: boolean) => {
     if (!selectedEntry || !selectedTile || selectedTile.phase !== "truthLie") return;
     const truthCorrect = answer === selectedEntry.isTruth;
     const nextTile = { ...selectedTile, phase: "speaker" as const, truthCorrect };
-    void saveState({ ...gameState, tiles: { ...gameState.tiles, [selectedEntry.id]: nextTile } });
+    void saveState({ ...gameState, activeTileId: selectedEntry.id, activePlayerId: selectedPlayerId, tiles: { ...gameState.tiles, [selectedEntry.id]: nextTile } });
     if (truthCorrect && selectedPlayerId) void updateRoomPlayerScore(roomCode, selectedPlayerId, selectedEntry.value);
   };
 
@@ -67,7 +69,7 @@ export default function WhoSaidItGrid({ roomCode, players }: { roomCode: string;
     if (!selectedEntry || !selectedTile || selectedTile.phase !== "speaker") return;
     const speakerCorrect = speaker === selectedEntry.speaker;
     const nextTile = { ...selectedTile, phase: "resolved" as const, speakerCorrect };
-    void saveState({ ...gameState, tiles: { ...gameState.tiles, [selectedEntry.id]: nextTile } });
+    void saveState({ ...gameState, activeTileId: selectedEntry.id, activePlayerId: selectedPlayerId, tiles: { ...gameState.tiles, [selectedEntry.id]: nextTile } });
     if (speakerCorrect && selectedPlayerId) void updateRoomPlayerScore(roomCode, selectedPlayerId, selectedEntry.value);
   };
 

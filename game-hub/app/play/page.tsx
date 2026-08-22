@@ -1,27 +1,38 @@
-'use client';
+"use client";
 
-import { FormEvent, Suspense, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { firebaseReady, joinRoom, submitTriviaAnswer, type TriviaSubmission } from "@/lib/firebase";
+import { useEffect, useState } from "react";
+import {
+  firebaseReady,
+  joinRoom,
+  listenToWhoSaidItGame,
+  updateWhoSaidItGame,
+  type WhoSaidItGameState,
+} from "@/lib/firebase";
+import dataset from "../../public/data/who-said-it.json";
 
-const question = "Which movie features the iconic quote “I’ll be back”?";
+const initialGameState: WhoSaidItGameState = {
+  tiles: Object.fromEntries(dataset.map((entry) => [entry.id, { phase: "hidden" }])),
+};
 
 function PlayPageContent() {
-  const searchParams = useSearchParams();
-  const [roomCode, setRoomCode] = useState(searchParams.get("roomCode") ?? "");
+  const [roomCode, setRoomCode] = useState("");
   const [playerName, setPlayerName] = useState("Player One");
-  const [answer, setAnswer] = useState("");
-  const [submission, setSubmission] = useState<TriviaSubmission | null>(null);
-  const [status, setStatus] = useState("Waiting for your answer.");
+  const [status, setStatus] = useState("Enter your name and room code to join.");
   const [joinedRoom, setJoinedRoom] = useState(false);
+  const [playerId, setPlayerId] = useState("");
+  const [gameState, setGameState] = useState<WhoSaidItGameState>(initialGameState);
 
-  const submitLabel = useMemo(() => {
-    if (!firebaseReady) {
-      return "Local preview mode";
-    }
-
-    return "Submit answer";
+  useEffect(() => {
+    const initialRoomCode = new URLSearchParams(window.location.search).get("roomCode") ?? "";
+    setRoomCode(initialRoomCode.toUpperCase());
   }, []);
+
+  useEffect(() => {
+    if (!joinedRoom || !roomCode) return;
+    return listenToWhoSaidItGame(roomCode, (nextState) => {
+      setGameState({ ...nextState, tiles: { ...initialGameState.tiles, ...nextState.tiles } });
+    });
+  }, [joinedRoom, roomCode]);
 
   const handleJoinRoom = async () => {
     const normalizedRoom = roomCode.trim().toUpperCase();
@@ -29,49 +40,38 @@ function PlayPageContent() {
       return;
     }
 
+    setJoinedRoom(true);
+    setStatus(firebaseReady ? "Joining room..." : `Joined ${normalizedRoom} in local preview mode.`);
+    window.history.replaceState({}, "", `/play?roomCode=${normalizedRoom}`);
+
     try {
-      const player = await joinRoom(normalizedRoom, playerName);
+      const player = await Promise.race([
+        joinRoom(normalizedRoom, playerName),
+        new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 8000)),
+      ]);
       if (!player) {
-        setStatus("Unable to join this room right now.");
+        setStatus(`Joined ${normalizedRoom}. Cloud sync is unavailable right now.`);
         return;
       }
 
-      setJoinedRoom(true);
       setStatus(`${player.name} joined room ${normalizedRoom}.`);
-      window.history.replaceState({}, "", `/play?roomCode=${normalizedRoom}`);
+      setPlayerId(player.id);
     } catch {
-      setStatus("Unable to join this room right now.");
+      setStatus(`Joined ${normalizedRoom}. Cloud sync is unavailable right now.`);
     }
   };
 
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-
-    const trimmedAnswer = answer.trim();
-    if (!trimmedAnswer) {
-      return;
-    }
-
-    const payload: TriviaSubmission = {
-      playerName: playerName.trim() || "Player One",
-      answer: trimmedAnswer,
-      submittedAt: new Date().toISOString(),
-      question,
+  const selectQuestion = async (tileId: string) => {
+    if (!playerId || gameState.tiles[tileId]?.phase !== "hidden") return;
+    const nextState = {
+      ...gameState,
+      activeTileId: tileId,
+      activePlayerId: playerId,
+      tiles: { ...gameState.tiles, [tileId]: { phase: "truthLie" as const } },
     };
-
-    setSubmission(payload);
-
-    if (firebaseReady) {
-      const didSubmit = await submitTriviaAnswer(payload, roomCode.trim().toUpperCase() || undefined);
-      setStatus(
-        didSubmit
-          ? `${payload.playerName} sent to the live trivia board.`
-          : "Firebase is unavailable. Showing local preview only."
-      );
-      return;
-    }
-
-    setStatus(`${payload.playerName} submitted in local preview mode.`);
+    setGameState(nextState);
+    await updateWhoSaidItGame(roomCode, nextState);
+    setStatus("Question selected. Watch the host screen for the statement.");
   };
 
   return (
@@ -109,42 +109,31 @@ function PlayPageContent() {
           >
             Join room
           </button>
-          {status && <p className="mt-3 text-sm text-slate-300">{status}</p>}
+          <p className="mt-3 text-sm text-slate-300">{status}</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="rounded-3xl border border-slate-700 bg-slate-900/80 p-6 shadow-2xl">
-          <div className="mb-6">
-            <p className="mb-2 text-sm font-medium text-slate-200">Current question</p>
-            <div className="rounded-xl bg-slate-800 p-4 text-base text-slate-100">{question}</div>
+        {joinedRoom && (
+          <div className="rounded-3xl border border-emerald-500/50 bg-emerald-500/10 p-6 text-center text-emerald-200 shadow-2xl">
+            <p className="text-lg font-bold">You are in the room</p>
+            <p className="mt-2 text-sm">Wait for the host to start a game.</p>
           </div>
+        )}
 
-          <label className="mb-6 block text-sm font-medium text-slate-200">
-            Your answer
-            <textarea
-              value={answer}
-              onChange={(event) => setAnswer(event.target.value)}
-              rows={4}
-              placeholder="Type your answer here..."
-              className="mt-2 w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-base text-white outline-none focus:border-fuchsia-500"
-              disabled={!joinedRoom}
-            />
-          </label>
-
-          <button
-            type="submit"
-            disabled={!joinedRoom || !answer.trim()}
-            className="w-full rounded-xl bg-fuchsia-500 px-4 py-3 text-lg font-bold text-white transition hover:bg-fuchsia-400 disabled:cursor-not-allowed disabled:bg-slate-600"
-          >
-            {submitLabel}
-          </button>
-        </form>
-
-        {submission && (
-          <div className="mt-6 rounded-2xl border border-emerald-500/50 bg-emerald-500/10 p-4 text-center text-emerald-200">
-            <p className="font-bold">Answer submitted</p>
-            <p className="mt-2 text-sm">{submission.playerName}: “{submission.answer}”</p>
-            <p className="mt-1 text-xs text-emerald-100">{status}</p>
-          </div>
+        {joinedRoom && playerId && (
+          <section className="mt-5 rounded-3xl border border-slate-700 bg-slate-900/80 p-5 shadow-2xl">
+            <p className="text-sm uppercase tracking-[0.2em] text-fuchsia-300">Who Said It?</p>
+            <h2 className="mt-2 text-2xl font-black">Choose a question</h2>
+            <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {dataset.map((entry) => {
+                const isAvailable = gameState.tiles[entry.id]?.phase === "hidden";
+                return (
+                  <button key={entry.id} type="button" disabled={!isAvailable} onClick={() => void selectQuestion(entry.id)} className="min-h-20 rounded-xl bg-slate-800 p-3 text-left font-bold text-amber-300 transition hover:bg-fuchsia-900 disabled:cursor-not-allowed disabled:opacity-40">
+                    ${entry.value}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
         )}
       </div>
     </main>
@@ -152,9 +141,5 @@ function PlayPageContent() {
 }
 
 export default function PlayPage() {
-  return (
-    <Suspense fallback={<main className="flex min-h-screen items-center justify-center bg-slate-950 text-white">Loading lobby...</main>}>
-      <PlayPageContent />
-    </Suspense>
-  );
+  return <PlayPageContent />;
 }

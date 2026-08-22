@@ -63,6 +63,8 @@ export type WhoSaidItTileState = {
 
 export type WhoSaidItGameState = {
   tiles: Record<string, WhoSaidItTileState>;
+  activeTileId?: string;
+  activePlayerId?: string;
 };
 
 function getTriviaSubmissionsPath(roomCode?: string) {
