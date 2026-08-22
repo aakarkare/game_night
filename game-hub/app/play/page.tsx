@@ -12,6 +12,9 @@ import {
 } from "@/lib/firebase";
 import dataset from "../../public/data/who-said-it.json";
 
+const speakerOptions = ["T", "M", "S", "P", "A"] as const;
+type Speaker = (typeof speakerOptions)[number];
+
 const initialGameState: WhoSaidItGameState = {
   tiles: Object.fromEntries(dataset.map((entry) => [entry.id, { phase: "hidden" }])),
 };
@@ -21,6 +24,7 @@ const playerSessionKey = "game-hub-player-session";
 function PlayPageContent() {
   const [roomCode, setRoomCode] = useState("");
   const [playerName, setPlayerName] = useState("Player One");
+  const [speaker, setSpeaker] = useState<Speaker | "">("");
   const [status, setStatus] = useState("Enter your name and room code to join.");
   const [joinedRoom, setJoinedRoom] = useState(false);
   const [playerId, setPlayerId] = useState("");
@@ -39,10 +43,11 @@ function PlayPageContent() {
     if (!savedSession) return;
 
     try {
-      const session = JSON.parse(savedSession) as { roomCode?: string; playerId?: string; playerName?: string };
-      if (session.roomCode === normalizedRoom && session.playerId && session.playerName) {
+      const session = JSON.parse(savedSession) as { roomCode?: string; playerId?: string; playerName?: string; speaker?: Speaker };
+      if (session.roomCode === normalizedRoom && session.playerId && session.playerName && session.speaker) {
         setPlayerId(session.playerId);
         setPlayerName(session.playerName);
+        setSpeaker(session.speaker);
         setJoinedRoom(true);
         setStatus(`Reconnected to ${normalizedRoom}.`);
       }
@@ -68,7 +73,7 @@ function PlayPageContent() {
 
   const handleJoinRoom = async () => {
     const normalizedRoom = roomCode.trim().toUpperCase();
-    if (!normalizedRoom || !playerName.trim()) {
+    if (!normalizedRoom || !playerName.trim() || !speaker) {
       return;
     }
 
@@ -78,7 +83,7 @@ function PlayPageContent() {
 
     try {
       const player = await Promise.race([
-        joinRoom(normalizedRoom, playerName),
+        joinRoom(normalizedRoom, playerName, speaker),
         new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 8000)),
       ]);
       if (!player) {
@@ -90,7 +95,7 @@ function PlayPageContent() {
       setPlayerId(player.id);
       window.localStorage.setItem(
         playerSessionKey,
-        JSON.stringify({ roomCode: normalizedRoom, playerId: player.id, playerName: player.name })
+        JSON.stringify({ roomCode: normalizedRoom, playerId: player.id, playerName: player.name, speaker: player.speaker })
       );
     } catch {
       setStatus(`Joined ${normalizedRoom}. Cloud sync is unavailable right now.`);
@@ -136,11 +141,28 @@ function PlayPageContent() {
               className="mt-2 w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-lg text-white outline-none focus:border-fuchsia-500"
             />
           </label>
+          <fieldset className="mb-5">
+            <legend className="mb-2 text-sm font-medium text-slate-200">Choose your speaker</legend>
+            <div className="grid grid-cols-5 gap-2">
+              {speakerOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setSpeaker(option)}
+                  aria-pressed={speaker === option}
+                  className={`h-12 rounded-xl border text-lg font-black transition ${speaker === option ? "border-fuchsia-300 bg-fuchsia-500 text-white" : "border-slate-600 bg-slate-950 text-slate-200 hover:border-fuchsia-400"}`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </fieldset>
           <button
             type="button"
             onClick={() => {
               void handleJoinRoom();
             }}
+            disabled={!speaker}
             className="w-full rounded-xl bg-sky-500 px-4 py-3 font-bold text-slate-950 hover:bg-sky-400"
           >
             Join room
@@ -171,8 +193,9 @@ function PlayPageContent() {
             <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5">
               {dataset.map((entry) => {
                 const isAvailable = gameState.tiles[entry.id]?.phase === "hidden";
+                const isOwnSpeakerTile = entry.speaker === (currentPlayer?.speaker ?? speaker);
                 return (
-                  <button key={entry.id} type="button" disabled={!isAvailable} onClick={() => void selectQuestion(entry.id)} className="min-h-20 rounded-xl bg-slate-800 p-3 text-left font-bold text-amber-300 transition hover:bg-fuchsia-900 disabled:cursor-not-allowed disabled:opacity-40">
+                  <button key={entry.id} type="button" disabled={!isAvailable || isOwnSpeakerTile} onClick={() => void selectQuestion(entry.id)} className={`min-h-20 rounded-xl p-3 text-left font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${isOwnSpeakerTile ? "bg-slate-950 text-slate-600" : "bg-slate-800 text-amber-300 hover:bg-fuchsia-900"}`}>
                     ${entry.value}
                   </button>
                 );

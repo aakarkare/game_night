@@ -44,6 +44,7 @@ export type RoomPlayer = {
   id: string;
   name: string;
   score: number;
+  speaker?: "T" | "M" | "S" | "P" | "A";
   avatarColor?: string;
 };
 
@@ -152,7 +153,7 @@ export async function ensureRoom(roomCode: string) {
   return true;
 }
 
-export async function joinRoom(roomCode: string, playerName: string) {
+export async function joinRoom(roomCode: string, playerName: string, speaker: RoomPlayer["speaker"]) {
   if (!firebaseFirestore || !roomCode || !playerName.trim()) {
     return null;
   }
@@ -186,6 +187,7 @@ export async function joinRoom(roomCode: string, playerName: string) {
     id: playerId,
     name: trimmedName,
     score: 0,
+    speaker,
     avatarColor: `hsl(${(playerId.length * 37) % 360} 75% 60%)`,
   };
 
