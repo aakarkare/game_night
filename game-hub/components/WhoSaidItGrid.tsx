@@ -26,20 +26,14 @@ function getInitialGameState(): WhoSaidItGameState {
 export default function WhoSaidItGrid({ roomCode, players }: { roomCode: string; players: RoomPlayer[] }) {
   const [gameState, setGameState] = useState<WhoSaidItGameState>(getInitialGameState);
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
-  const [selectedPlayerId, setSelectedPlayerId] = useState(players[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    setSelectedPlayerId((current) => current || players[0]?.id || "");
-  }, [players]);
 
   useEffect(() => {
     return listenToWhoSaidItGame(roomCode, (nextState) => {
       setGameState({ ...nextState, tiles: { ...initialTiles, ...nextState.tiles } });
       setSelectedTileId(nextState.activeTileId ?? null);
-      setSelectedPlayerId(nextState.activePlayerId ?? players[0]?.id ?? "");
     });
-  }, [roomCode, players]);
+  }, [roomCode]);
 
   const selectedEntry = dataset.find((entry) => entry.id === selectedTileId) ?? null;
   const selectedTile = selectedEntry ? gameState.tiles[selectedEntry.id] : null;
@@ -54,23 +48,26 @@ export default function WhoSaidItGrid({ roomCode, players }: { roomCode: string;
   const openTile = (entry: WhoSaidItEntry) => {
     if (gameState.tiles[entry.id]?.phase !== "hidden") return;
     setSelectedTileId(entry.id);
-    void saveState({ ...gameState, activeTileId: entry.id, activePlayerId: selectedPlayerId, tiles: { ...gameState.tiles, [entry.id]: { phase: "truthLie" } } });
+    void saveState({
+      tiles: { ...gameState.tiles, [entry.id]: { phase: "truthLie" } },
+      activeTileId: entry.id,
+    });
   };
 
   const resolveTruthLie = (answer: boolean) => {
     if (!selectedEntry || !selectedTile || selectedTile.phase !== "truthLie") return;
     const truthCorrect = answer === selectedEntry.isTruth;
     const nextTile = { ...selectedTile, phase: "speaker" as const, truthCorrect };
-    void saveState({ ...gameState, activeTileId: selectedEntry.id, activePlayerId: selectedPlayerId, tiles: { ...gameState.tiles, [selectedEntry.id]: nextTile } });
-    if (truthCorrect && selectedPlayerId) void updateRoomPlayerScore(roomCode, selectedPlayerId, selectedEntry.value);
+    void saveState({ ...gameState, activeTileId: selectedEntry.id, tiles: { ...gameState.tiles, [selectedEntry.id]: nextTile } });
+    if (truthCorrect && gameState.activePlayerId) void updateRoomPlayerScore(roomCode, gameState.activePlayerId, selectedEntry.value);
   };
 
   const resolveSpeaker = (speaker: string) => {
     if (!selectedEntry || !selectedTile || selectedTile.phase !== "speaker") return;
     const speakerCorrect = speaker === selectedEntry.speaker;
     const nextTile = { ...selectedTile, phase: "resolved" as const, speakerCorrect };
-    void saveState({ ...gameState, activeTileId: selectedEntry.id, activePlayerId: selectedPlayerId, tiles: { ...gameState.tiles, [selectedEntry.id]: nextTile } });
-    if (speakerCorrect && selectedPlayerId) void updateRoomPlayerScore(roomCode, selectedPlayerId, selectedEntry.value);
+    void saveState({ ...gameState, activeTileId: selectedEntry.id, tiles: { ...gameState.tiles, [selectedEntry.id]: nextTile } });
+    if (speakerCorrect && gameState.activePlayerId) void updateRoomPlayerScore(roomCode, gameState.activePlayerId, selectedEntry.value);
   };
 
   return (
@@ -80,13 +77,11 @@ export default function WhoSaidItGrid({ roomCode, players }: { roomCode: string;
           <p className="text-sm uppercase tracking-[0.2em] text-fuchsia-400">Trivia / Who Said It?</p>
           <h2 className="mt-2 text-3xl font-black">Truth or lie, then name the speaker</h2>
         </div>
-        <label className="text-sm text-slate-300">
-          Award points to
-          <select value={selectedPlayerId} onChange={(event) => setSelectedPlayerId(event.target.value)} className="ml-2 rounded-lg bg-slate-800 px-3 py-2 text-white">
-            <option value="">Select player</option>
-            {players.map((player) => <option key={player.id} value={player.id}>{player.name}</option>)}
-          </select>
-        </label>
+        <p className="text-sm text-slate-400">
+          {gameState.activePlayerId
+            ? `Question selected by ${players.find((player) => player.id === gameState.activePlayerId)?.name ?? "a player"}`
+            : "Host-selected questions earn no points"}
+        </p>
       </div>
 
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
@@ -102,7 +97,8 @@ export default function WhoSaidItGrid({ roomCode, players }: { roomCode: string;
       </div>
 
       {selectedEntry && selectedTile && selectedTile.phase !== "hidden" && selectedTile.phase !== "resolved" && (
-        <div className="mt-6 rounded-xl border border-fuchsia-400/40 bg-slate-800 p-5">
+        <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-950/80 p-6 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-2xl border border-fuchsia-400/50 bg-slate-800 p-6 shadow-2xl">
           <p className="text-lg font-semibold text-white">{selectedEntry.statement}</p>
           {selectedTile.phase === "truthLie" ? (
             <div className="mt-4 flex gap-3">
@@ -115,13 +111,16 @@ export default function WhoSaidItGrid({ roomCode, players }: { roomCode: string;
               <div className="flex flex-wrap gap-3">{speakerOptions.map((speaker) => <button key={speaker} type="button" onClick={() => resolveSpeaker(speaker)} className="h-12 w-12 rounded-lg bg-sky-500 text-lg font-black text-slate-950 hover:bg-sky-400">{speaker}</button>)}</div>
             </div>
           )}
+          </div>
         </div>
       )}
 
       {selectedEntry && selectedTile?.phase === "resolved" && (
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/40 bg-emerald-950/40 p-5 text-emerald-100">
+        <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-950/80 p-6 backdrop-blur-sm">
+          <div className="flex w-full max-w-2xl flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/40 bg-emerald-950/90 p-5 text-emerald-100 shadow-2xl">
           <span>Truth: {selectedTile.truthCorrect ? "correct" : "0 points"}. Speaker: {selectedTile.speakerCorrect ? "correct" : "0 points"}.</span>
           <button type="button" onClick={() => setSelectedTileId(null)} className="rounded-lg border border-emerald-400/50 px-4 py-2 font-semibold">Next tile</button>
+          </div>
         </div>
       )}
       {saving && <p className="mt-4 text-xs text-slate-500">Saving game state...</p>}

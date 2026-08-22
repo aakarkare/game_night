@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ensureRoom, firebaseReady, listenToRoomPlayers, listenToTriviaSubmissions, type RoomPlayer, type TriviaSubmission } from "@/lib/firebase";
+import { ensureRoom, firebaseReady, listenToRoomPlayers, listenToTriviaSubmissions, updateRoomGame, type RoomPlayer, type TriviaSubmission } from "@/lib/firebase";
 import WhoSaidItGrid from "@/components/WhoSaidItGrid";
 
 type Clue = {
@@ -25,7 +25,7 @@ type Player = {
 
 type HostGame = "landing" | "jeopardy" | "trivia" | "scoreboard";
 
-const triviaCategories = ["who said it?", "topic 1", "topic 2"];
+const triviaCategories = ["who said it?"];
 
 const initialCategories: Category[] = [
   {
@@ -227,7 +227,10 @@ function HostPageContent() {
               <button
                 key={game.id}
                 type="button"
-                onClick={() => setSelectedGame(game.id)}
+                onClick={() => {
+                  setSelectedGame(game.id);
+                  void updateRoomGame(roomCode, game.id === "trivia" ? "whoSaidIt" : game.id);
+                }}
                 className={`min-h-56 rounded-2xl bg-gradient-to-br ${game.color} p-6 text-left text-slate-950 shadow-xl transition hover:-translate-y-1`}
               >
                 <span className="text-3xl font-black">{game.title}</span>

@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import {
   firebaseReady,
   joinRoom,
+  listenToRoom,
   listenToWhoSaidItGame,
   updateWhoSaidItGame,
+  type RoomState,
   type WhoSaidItGameState,
 } from "@/lib/firebase";
 import dataset from "../../public/data/who-said-it.json";
@@ -21,6 +23,7 @@ function PlayPageContent() {
   const [joinedRoom, setJoinedRoom] = useState(false);
   const [playerId, setPlayerId] = useState("");
   const [gameState, setGameState] = useState<WhoSaidItGameState>(initialGameState);
+  const [activeGame, setActiveGame] = useState<RoomState["activeGame"]>("lobby");
 
   useEffect(() => {
     const initialRoomCode = new URLSearchParams(window.location.search).get("roomCode") ?? "";
@@ -29,9 +32,14 @@ function PlayPageContent() {
 
   useEffect(() => {
     if (!joinedRoom || !roomCode) return;
-    return listenToWhoSaidItGame(roomCode, (nextState) => {
+    const unsubscribeRoom = listenToRoom(roomCode, (room) => setActiveGame(room.activeGame ?? "lobby"));
+    const unsubscribeGame = listenToWhoSaidItGame(roomCode, (nextState) => {
       setGameState({ ...nextState, tiles: { ...initialGameState.tiles, ...nextState.tiles } });
     });
+    return () => {
+      unsubscribeRoom();
+      unsubscribeGame();
+    };
   }, [joinedRoom, roomCode]);
 
   const handleJoinRoom = async () => {
@@ -82,7 +90,7 @@ function PlayPageContent() {
           <h1 className="mt-3 text-4xl font-black">Trivia Input</h1>
         </header>
 
-        <div className="mb-5 rounded-3xl border border-slate-700 bg-slate-900/80 p-5 shadow-2xl">
+        {!joinedRoom && <div className="mb-5 rounded-3xl border border-slate-700 bg-slate-900/80 p-5 shadow-2xl">
           <label className="mb-4 block text-sm font-medium text-slate-200">
             Room code
             <input
@@ -110,16 +118,18 @@ function PlayPageContent() {
             Join room
           </button>
           <p className="mt-3 text-sm text-slate-300">{status}</p>
-        </div>
+        </div>}
 
         {joinedRoom && (
           <div className="rounded-3xl border border-emerald-500/50 bg-emerald-500/10 p-6 text-center text-emerald-200 shadow-2xl">
             <p className="text-lg font-bold">You are in the room</p>
-            <p className="mt-2 text-sm">Wait for the host to start a game.</p>
+            <p className="mt-2 text-sm">
+              {activeGame === "lobby" ? "Wait for the host to start a game." : `The host opened ${activeGame === "whoSaidIt" ? "Who Said It?" : activeGame}.`}
+            </p>
           </div>
         )}
 
-        {joinedRoom && playerId && (
+        {joinedRoom && playerId && activeGame === "whoSaidIt" && (
           <section className="mt-5 rounded-3xl border border-slate-700 bg-slate-900/80 p-5 shadow-2xl">
             <p className="text-sm uppercase tracking-[0.2em] text-fuchsia-300">Who Said It?</p>
             <h2 className="mt-2 text-2xl font-black">Choose a question</h2>
@@ -135,6 +145,9 @@ function PlayPageContent() {
             </div>
           </section>
         )}
+
+        {joinedRoom && activeGame === "jeopardy" && <div className="mt-5 rounded-3xl border border-amber-400/40 bg-amber-500/10 p-6 text-center text-amber-100">The host opened Jeopardy. Watch the host board for the current clue.</div>}
+        {joinedRoom && activeGame === "scoreboard" && <div className="mt-5 rounded-3xl border border-sky-400/40 bg-sky-500/10 p-6 text-center text-sky-100">The host opened the scoreboard. Your score will update here as you play.</div>}
       </div>
     </main>
   );

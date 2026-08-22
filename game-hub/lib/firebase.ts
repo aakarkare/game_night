@@ -50,7 +50,7 @@ export type RoomPlayer = {
 export type RoomState = {
   roomCode: string;
   createdAt: number;
-  activeGame: "lobby" | "jeopardy" | "trivia" | "questionnaire";
+  activeGame: "lobby" | "jeopardy" | "whoSaidIt" | "scoreboard" | "questionnaire";
   players?: Record<string, RoomPlayer>;
   whoSaidIt?: WhoSaidItGameState;
 };
@@ -66,6 +66,29 @@ export type WhoSaidItGameState = {
   activeTileId?: string;
   activePlayerId?: string;
 };
+
+export function listenToRoom(
+  roomCode: string,
+  callback: (room: Partial<RoomState>) => void
+): Unsubscribe {
+  if (!firebaseFirestore || !roomCode) {
+    callback({ activeGame: "lobby" });
+    return () => undefined;
+  }
+
+  return onSnapshot(doc(firebaseFirestore, "rooms", roomCode), (snapshot) => {
+    callback((snapshot.data() ?? {}) as Partial<RoomState>);
+  });
+}
+
+export async function updateRoomGame(roomCode: string, activeGame: RoomState["activeGame"]) {
+  if (!firebaseFirestore || !roomCode) {
+    return false;
+  }
+
+  await setDoc(doc(firebaseFirestore, "rooms", roomCode), { activeGame }, { merge: true });
+  return true;
+}
 
 function getTriviaSubmissionsPath(roomCode?: string) {
   return roomCode ? `rooms/${roomCode}/trivia_submissions` : "triviaSubmissions";
@@ -137,7 +160,6 @@ export async function joinRoom(roomCode: string, playerName: string) {
     roomRef,
     {
       roomCode: normalizedCode,
-      activeGame: "lobby",
       players: {
         ...updatedPlayers,
         [playerId]: nextPlayer,
