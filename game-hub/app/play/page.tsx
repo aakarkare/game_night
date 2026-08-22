@@ -16,6 +16,8 @@ const initialGameState: WhoSaidItGameState = {
   tiles: Object.fromEntries(dataset.map((entry) => [entry.id, { phase: "hidden" }])),
 };
 
+const playerSessionKey = "game-hub-player-session";
+
 function PlayPageContent() {
   const [roomCode, setRoomCode] = useState("");
   const [playerName, setPlayerName] = useState("Player One");
@@ -25,14 +27,28 @@ function PlayPageContent() {
   const [gameState, setGameState] = useState<WhoSaidItGameState>(initialGameState);
   const [activeGame, setActiveGame] = useState<RoomState["activeGame"]>("lobby");
   const [players, setPlayers] = useState<RoomState["players"]>({});
-  const [resultOverlay, setResultOverlay] = useState<{ correct: boolean; points: number } | null>(null);
-  const [lastResultTileId, setLastResultTileId] = useState<string | null>(null);
 
   const currentPlayer = playerId ? players?.[playerId] : undefined;
 
   useEffect(() => {
     const initialRoomCode = new URLSearchParams(window.location.search).get("roomCode") ?? "";
-    setRoomCode(initialRoomCode.toUpperCase());
+    const normalizedRoom = initialRoomCode.toUpperCase();
+    setRoomCode(normalizedRoom);
+
+    const savedSession = window.localStorage.getItem(playerSessionKey);
+    if (!savedSession) return;
+
+    try {
+      const session = JSON.parse(savedSession) as { roomCode?: string; playerId?: string; playerName?: string };
+      if (session.roomCode === normalizedRoom && session.playerId && session.playerName) {
+        setPlayerId(session.playerId);
+        setPlayerName(session.playerName);
+        setJoinedRoom(true);
+        setStatus(`Reconnected to ${normalizedRoom}.`);
+      }
+    } catch {
+      window.localStorage.removeItem(playerSessionKey);
+    }
   }, []);
 
   useEffect(() => {
@@ -49,33 +65,6 @@ function PlayPageContent() {
       unsubscribeGame();
     };
   }, [joinedRoom, roomCode]);
-
-  useEffect(() => {
-    const activeTileId = gameState.activeTileId;
-    const activeTile = activeTileId ? gameState.tiles[activeTileId] : undefined;
-    const entry = dataset.find((item) => item.id === activeTileId);
-
-    if (!activeTileId || activeTile?.phase !== "resolved") {
-      setLastResultTileId(null);
-      setResultOverlay(null);
-      return;
-    }
-
-    if (
-      !entry ||
-      !activeTile ||
-      gameState.activePlayerId !== playerId ||
-      lastResultTileId === activeTileId
-    ) {
-      return;
-    }
-
-    const points = (activeTile.truthCorrect ? entry.value : 0) + (activeTile.speakerCorrect ? entry.value : 0);
-    setLastResultTileId(activeTileId);
-    setResultOverlay({ correct: Boolean(activeTile.truthCorrect && activeTile.speakerCorrect), points });
-    const timeoutId = window.setTimeout(() => setResultOverlay(null), 3000);
-    return () => window.clearTimeout(timeoutId);
-  }, [gameState, lastResultTileId, playerId]);
 
   const handleJoinRoom = async () => {
     const normalizedRoom = roomCode.trim().toUpperCase();
@@ -99,6 +88,10 @@ function PlayPageContent() {
 
       setStatus(`${player.name} joined room ${normalizedRoom}.`);
       setPlayerId(player.id);
+      window.localStorage.setItem(
+        playerSessionKey,
+        JSON.stringify({ roomCode: normalizedRoom, playerId: player.id, playerName: player.name })
+      );
     } catch {
       setStatus(`Joined ${normalizedRoom}. Cloud sync is unavailable right now.`);
     }
@@ -191,14 +184,6 @@ function PlayPageContent() {
         {joinedRoom && activeGame === "jeopardy" && <div className="mt-5 rounded-3xl border border-amber-400/40 bg-amber-500/10 p-6 text-center text-amber-100">The host opened Jeopardy. Watch the host board for the current clue.</div>}
         {joinedRoom && activeGame === "scoreboard" && <div className="mt-5 rounded-3xl border border-sky-400/40 bg-sky-500/10 p-6 text-center text-sky-100">The host opened the scoreboard. Your score will update here as you play.</div>}
       </div>
-      {resultOverlay && (
-        <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-950/75 p-6 backdrop-blur-sm">
-          <div className={`w-full max-w-sm rounded-2xl border p-8 text-center shadow-2xl ${resultOverlay.correct ? "border-emerald-400/60 bg-emerald-950/95 text-emerald-100" : "border-rose-400/60 bg-rose-950/95 text-rose-100"}`}>
-            <p className="text-3xl font-black">{resultOverlay.correct ? "Correct!" : "Not quite"}</p>
-            <p className="mt-3 text-xl font-bold">{resultOverlay.points} points awarded</p>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

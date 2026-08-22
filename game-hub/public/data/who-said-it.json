@@ -34,34 +34,34 @@
   {
     "id": "quote-05",
     "value": 5,
-    "statement": "Elementary, my dear Watson.",
-    "isTruth": false,
+    "statement": "I was a state level track athlete.",
+    "isTruth": true,
     "speaker": "P",
-    "speakerName": "Sherlock Holmes"
+    "speakerName": "Preethi"
   },
   {
     "id": "quote-06",
     "value": 10,
-    "statement": "That's one small step for man, one giant leap for mankind.",
+    "statement": "I shook Prabhu Deva's dad's hand.",
     "isTruth": true,
-    "speaker": "T",
-    "speakerName": "Neil Armstrong"
+    "speaker": "P",
+    "speakerName": "Preethi"
   },
   {
     "id": "quote-07",
     "value": 5,
-    "statement": "We are all in the gutter, but some of us are looking at the stars.",
+    "statement": "I have been to a wedding where I didn't know the bride or groom.",
     "isTruth": true,
-    "speaker": "S",
-    "speakerName": "Oscar Wilde"
+    "speaker": "M",
+    "speakerName": "Madhu"
   },
   {
     "id": "quote-08",
     "value": 10,
-    "statement": "May the Force be with you.",
+    "statement": "I've never been on a cruise.",
     "isTruth": true,
-    "speaker": "A",
-    "speakerName": "General Dodonna"
+    "speaker": "M",
+    "speakerName": "Madhu"
   },
   {
     "id": "quote-09",

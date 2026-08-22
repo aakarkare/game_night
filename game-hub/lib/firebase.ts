@@ -288,7 +288,7 @@ export function listenToRoomPlayers(
       ...(value as Record<string, unknown>),
       id,
       score: Number((value as { score?: number })?.score ?? 0),
-      name: String((value as { name?: string })?.name ?? id),
+      name: String((value as { name?: string })?.name ?? "Player"),
     })) as RoomPlayer[];
 
     callback(players);

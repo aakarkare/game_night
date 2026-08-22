@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ensureRoom, firebaseReady, listenToRoomPlayers, listenToTriviaSubmissions, resetRoom, resetWhoSaidItGame, updateRoomGame, type RoomPlayer, type TriviaSubmission } from "@/lib/firebase";
+import { ensureRoom, firebaseReady, listenToRoom, listenToRoomPlayers, listenToTriviaSubmissions, resetRoom, resetWhoSaidItGame, updateRoomGame, type RoomPlayer, type TriviaSubmission } from "@/lib/firebase";
 import WhoSaidItGrid from "@/components/WhoSaidItGrid";
 
 type HostGame = "landing" | "trivia" | "scoreboard";
@@ -34,6 +34,25 @@ function HostPageContent() {
       unsubscribePlayers();
       unsubscribeTrivia();
     };
+  }, [roomCodeFromUrl]);
+
+  useEffect(() => {
+    if (!roomCodeFromUrl) {
+      return;
+    }
+
+    return listenToRoom(roomCodeFromUrl, (room) => {
+      if (room.activeGame === "whoSaidIt") {
+        setSelectedGame("trivia");
+        setTriviaCategory("who said it?");
+      } else if (room.activeGame === "scoreboard") {
+        setSelectedGame("scoreboard");
+        setTriviaCategory(null);
+      } else {
+        setSelectedGame("landing");
+        setTriviaCategory(null);
+      }
+    });
   }, [roomCodeFromUrl]);
 
   const handleCreateRoom = async () => {
@@ -104,7 +123,7 @@ function HostPageContent() {
             New game
           </button>
 
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2">
             {[
               { id: "trivia" as const, title: "Trivia", detail: "Pick a category and send questions to players.", color: "from-fuchsia-500 to-rose-500" },
               { id: "scoreboard" as const, title: "Scoreboard", detail: "Track every player's live score.", color: "from-sky-400 to-cyan-500" },
